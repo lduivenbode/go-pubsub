@@ -34,7 +34,7 @@ func ConsumerTag(tag string) func(p *Provider) error {
 }
 
 // New - returns a new instance of the RabbitMQ provider
-func New(options ...func(*Provider) error) (pubsub.Provider, error) {
+func New(options ...func(*Provider) error) (*Provider, error) {
 	var err error
 
 	p := Provider{}
@@ -75,20 +75,11 @@ func New(options ...func(*Provider) error) (pubsub.Provider, error) {
 }
 
 // Subscribe - subscribe
-func (p *Provider) Subscribe(s pubsub.Subscription) (<-chan pubsub.Message, error) {
-	sub, ok := s.(*subscription.Subscription)
-	if !ok {
-		return nil, fmt.Errorf("unable to subscribe - invalid argument type")
-	}
+func (p *Provider) Subscribe(s *subscription.Subscription) (<-chan *Message, error) {
+	q := s.Queue()
+	e := s.Exchange()
 
-	q, ok := s.Queue().(*queue.Queue)
-	if !ok {
-		return nil, fmt.Errorf("unable to subscribe - invalid argument type")
-	}
-
-	e := sub.Exchange()
-
-	if e.Name() != "" && len(sub.Topics()) > 0 {
+	if e.Name() != "" && len(s.Topics()) > 0 {
 		err := p.ch.ExchangeDeclare(
 			e.Name(),       // exchange
 			"topic",        // kind
@@ -119,7 +110,7 @@ func (p *Provider) Subscribe(s pubsub.Subscription) (<-chan pubsub.Message, erro
 
 	q.SetName(rq.Name)
 
-	for _, t := range sub.Topics() {
+	for _, t := range s.Topics() {
 		if err = p.ch.QueueBind(q.Name(), t, e.Name(), false, nil); err != nil {
 			return nil, fmt.Errorf("unable to subscribe - %s", err)
 		}
@@ -128,11 +119,11 @@ func (p *Provider) Subscribe(s pubsub.Subscription) (<-chan pubsub.Message, erro
 	msgs, err := p.ch.Consume(
 		q.Name(),        // queue
 		p.consumerTag,   // consumer
-		sub.AutoAck(),   // autoAck
-		sub.Exclusive(), // exclusive
-		sub.NoLocal(),   // noLocal
-		sub.NoWait(),    // noWait
-		sub.Args(),      // args
+		s.AutoAck(),   // autoAck
+		s.Exclusive(), // exclusive
+		s.NoLocal(),   // noLocal
+		s.NoWait(),    // noWait
+		s.Args(),      // args
 	)
 	if err != nil {
 		return nil, err

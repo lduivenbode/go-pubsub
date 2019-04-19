@@ -1,6 +1,7 @@
 package subscription
 
 import (
+	"github.com/lduivenbode/go-pubsub/rabbitmq/queue"
 	"github.com/streadway/amqp"
 	"fmt"
 	"github.com/lduivenbode/go-pubsub/rabbitmq/exchange"
@@ -9,7 +10,7 @@ import (
 
 type Subscription struct {
 	exchange *exchange.Exchange
-	queue pubsub.Queue
+	queue *queue.Queue
 	topics []string
 	autoAck bool
 	exclusive bool
@@ -42,7 +43,7 @@ func (s *Subscription) Exchange() *exchange.Exchange {
 	return s.exchange
 }
 
-func (s *Subscription) Queue() pubsub.Queue {
+func (s *Subscription) Queue() *queue.Queue {
 	return s.queue
 }
 
